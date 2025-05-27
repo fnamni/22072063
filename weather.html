@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Weather Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body, h1, h2, h3, h4, h5, h6 {
+      font-family: "Lato", sans-serif;
+      color: #777;
+      line-height: 1.8;
+      margin: 0;
+      padding: 0;
+      background-color: #fff;
+    }
+
+    .main-container {
+      max-width: 900px;
+      margin: 80px auto 40px auto;
+      padding: 0 16px;
+    }
+
+    .input-group {
+      max-width: 900px;
+      margin: 30px auto 40px auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #cityInput {
+      width: 60%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    button#wBtn {
+      background-color: #888 !important;
+      color: white !important;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #weatherResult {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px #ddd;
+      text-align: center;
+      font-size: 18px;
+      color: #333;
+    }
+
+    canvas {
+      margin-top: 20px;
+      max-width: 100%;
+    }
+
+    @media only screen and (max-width: 768px) {
+      .input-group {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      #cityInput, button#wBtn {
+        width: 100%;
+      }
+
+      button#wBtn {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="w3-top">
+  <div class="w3-bar w3-white w3-card" id="myNavbar">
+    <a href="javascript:void(0);" class="w3-bar-item w3-button w3-hover-black w3-hide-medium w3-hide-large w3-right" onclick="toggleFunction()" title="Toggle Navigation Menu">
+      <i class="fa fa-bars"></i>
+    </a>
+    <a href="/index.html" class="w3-bar-item w3-button">HOME</a>
+    <a href="/weather.html" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-cloud"></i> WEATHER</a>
+    <a href="/movie.html" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-film"></i> MOVIE</a>
+  </div>
+  <div id="navDemo" class="w3-bar-block w3-white w3-hide w3-hide-large w3-hide-medium">
+    <a href="/weather.html" class="w3-bar-item w3-button" onclick="toggleFunction()">WEATHER</a>
+    <a href="/movie.html" class="w3-bar-item w3-button" onclick="toggleFunction()">MOVIE</a>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-container">
+  <h3 class="w3-center">Weather Dashboard</h3>
+
+  <div class="input-group">
+    <input type="text" id="cityInput" placeholder="Kuala Lumpur" />
+    <button id="wBtn" onclick="getWeather()">Check Weather</button>
+  </div>
+
+  <div id="weatherResult" style="display:none;"></div>
+  <canvas id="weatherChart" style="display:none;"></canvas>
+</div>
+
+<script>
+  function toggleFunction() {
+    const x = document.getElementById("navDemo");
+    if (x.className.indexOf("w3-show") === -1) {
+      x.className += " w3-show";
+    } else {
+      x.className = x.className.replace(" w3-show", "");
+    }
+  }
+
+  window.onscroll = function () {
+    const navbar = document.getElementById("myNavbar");
+    if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+      navbar.className = "w3-bar w3-card w3-animate-top w3-white";
+    } else {
+      navbar.className = navbar.className.replace(" w3-card w3-animate-top w3-white", "");
+    }
+  };
+
+  let chart;
+
+  async function getWeather() {
+    const apiKey = "406d4d9dab8ce805ea7133ab7e71be60"; // Gantikan dengan API key anda
+    const city = document.getElementById("cityInput").value.trim();
+    const resultDiv = document.getElementById("weatherResult");
+    const chartCanvas = document.getElementById("weatherChart");
+
+    if (!city) {
+      resultDiv.style.display = "block";
+      resultDiv.innerHTML = "<p>Please enter a city name.</p>";
+      chartCanvas.style.display = "none";
+      return;
+    }
+
+    try {
+      const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+
+      const [resCurrent, resForecast] = await Promise.all([
+        fetch(currentUrl),
+        fetch(forecastUrl)
+      ]);
+
+      if (!resCurrent.ok) throw new Error("City not found.");
+      if (!resForecast.ok) throw new Error("Forecast data unavailable.");
+
+      const dataCurrent = await resCurrent.json();
+      const dataForecast = await resForecast.json();
+
+      resultDiv.innerHTML = `
+        <h4>${dataCurrent.name}, ${dataCurrent.sys.country}</h4>
+        <img src="https://openweathermap.org/img/wn/${dataCurrent.weather[0].icon}@2x.png" alt="icon">
+        <p><strong>${dataCurrent.weather[0].description.toUpperCase()}</strong></p>
+        <p>Humidity: ${dataCurrent.main.humidity}%</p>
+        <p>Wind Speed: ${dataCurrent.wind.speed} m/s</p>
+      `;
+      resultDiv.style.display = "block";
+
+      const labels = [];
+      const temps = [];
+      for (let i = 0; i < 8; i++) {
+        const item = dataForecast.list[i];
+        const time = item.dt_txt.split(" ")[1].slice(0, 5);
+        labels.push(time);
+        temps.push(item.main.temp);
+      }
+
+      const ctx = chartCanvas.getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{
+            label: `Temperature (°C) in ${dataCurrent.name}`,
+            data: temps,
+            borderColor: "#FF5722",
+            backgroundColor: "rgba(255, 87, 34, 0.2)",
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              title: {
+                display: true,
+                text: "Temperature (°C)"
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: "Time"
+              }
+            }
+          }
+        }
+      });
+      chartCanvas.style.display = "block";
+
+    } catch (error) {
+      resultDiv.innerHTML = `<p style="color:red;">${error.message}</p>`;
+      resultDiv.style.display = "block";
+      chartCanvas.style.display = "none";
+      if (chart) chart.destroy();
+    }
+  }
+</script>
+
+</body>
+</html>

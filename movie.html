@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Movie Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+  <!-- W3.CSS, Font, and FontAwesome -->
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/5/w3.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body, h1, h2, h3, h4, h5, h6 {
+      font-family: "Lato", sans-serif;
+      color: #777;
+      line-height: 1.8;
+      margin: 0;
+      padding: 0;
+      background-color: #fff;
+    }
+
+    .main-container {
+      max-width: 900px;
+      margin: 80px auto 40px auto;
+      padding: 0 16px;
+    }
+
+    table.w3-table-all {
+      margin: 40 px auto;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 800px;
+      border: 1px solid #ccc;
+      border-collapse: collapse;
+      background-color: white;
+    }
+
+    table.w3-table-all th,
+    table.w3-table-all td {
+        border: 1px solid #ccc; /* Border setiap sel */
+        padding: 12px;
+    }
+
+    #chartContainer {
+      width: 100%;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    #movieChart {
+        width: 100% !important;
+        height: auto !important;
+        display: block;
+        margin: 0 auto;
+    }
+
+    #search{
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto 20px auto;
+        display: block;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+
+    #movieTable {
+    margin-bottom: 60px; /* Jarak dari footer */
+    text-align: center;
+    }
+
+    @media only screen and (max-width: 768px) {
+      .main-container {
+        margin: 100px 12px 30px 12px;
+      }
+      table.w3-table-all {
+        font-size: 14px;
+      }
+    }
+    @media only screen and (max-width: 480px) {
+      .main-container {
+        margin: 100px 8px 20px 8px;
+      }
+      table.w3-table-all {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="w3-top">
+  <div class="w3-bar w3-white w3-card" id="myNavbar">
+    <a href="javascript:void(0);" class="w3-bar-item w3-button w3-hover-black w3-hide-medium w3-hide-large w3-right" onclick="toggleFunction()" title="Toggle Navigation Menu">
+      <i class="fa fa-bars"></i>
+    </a>
+    <a href="/index.html" class="w3-bar-item w3-button">HOME</a>
+    <a href="/weather.html" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-cloud"></i> WEATHER</a>
+    <a href="/movie.html" class="w3-bar-item w3-button w3-hide-small"><i class="fa fa-film"></i> MOVIE</a>
+  </div>
+
+  <div id="navDemo" class="w3-bar-block w3-white w3-hide w3-hide-large w3-hide-medium">
+    <a href="/weather.html" class="w3-bar-item w3-button" onclick="toggleFunction()">WEATHER</a>
+    <a href="/movie.html" class="w3-bar-item w3-button" onclick="toggleFunction()">MOVIE</a>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-container">
+  <h3 class="w3-center">Movie Dashboard</h3>
+
+  <input type="text" id="search" placeholder="Search movie title..." class="w3-input w3-border w3-margin-bottom" />
+
+  <div id="chartContainer">
+    <canvas id="movieChart"></canvas>
+  </div>
+</div>
+
+<div id="movieTable"></div>
+<script>
+  const API_KEY = "00169e76616cb5217952865349f88550";
+  const TOP_API = `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&language=en-US&page=1`;
+  const SEARCH_API = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&language=en-US&query=`;
+
+  let currentChart = null;
+
+  async function fetchMovies(url) {
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.results.slice(0, 10);
+    } catch (error) {
+      console.error("Fetch error:", error);
+      return [];
+    }
+  }
+
+  function renderTable(movies) {
+    let html = "<table class='w3-table-all w3-hoverable w3-centered'><tr class='w3-light-grey'><th>Title</th><th>Rating</th><th>Release Date</th></tr>";
+    movies.forEach(movie => {
+      html += `<tr>
+        <td>${movie.title}</td>
+        <td>${movie.vote_average}</td>
+        <td>${movie.release_date}</td>
+      </tr>`;
+    });
+    html += "</table>";
+    document.getElementById("movieTable").innerHTML = html;
+  }
+
+  function renderChart(movies) {
+    const ctx = document.getElementById("movieChart").getContext("2d");
+
+    if (currentChart) {
+      currentChart.destroy();
+    }
+
+    currentChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: movies.map(m => m.title),
+        datasets: [{
+          label: "Rating",
+          data: movies.map(m => m.vote_average),
+          backgroundColor: "rgba(0, 123, 255, 0.6)",
+          borderColor: "rgba(0, 123, 255, 1)",
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 10
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  async function updateDashboard(keyword) {
+    let url = keyword
+      ? SEARCH_API + encodeURIComponent(keyword)
+      : TOP_API;
+
+    const movies = await fetchMovies(url);
+    renderTable(movies);
+    renderChart(movies);
+  }
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    const keyword = e.target.value.trim();
+    updateDashboard(keyword);
+  });
+
+  window.onload = () => {
+    updateDashboard("");
+  };
+
+  function toggleFunction() {
+    const x = document.getElementById("navDemo");
+    if (x.className.indexOf("w3-show") === -1) {
+      x.className += " w3-show";
+    } else {
+      x.className = x.className.replace(" w3-show", "");
+    }
+  }
+
+  window.onscroll = function () {
+    var navbar = document.getElementById("myNavbar");
+    if (
+      document.body.scrollTop > 100 ||
+      document.documentElement.scrollTop > 100
+    ) {
+      navbar.className = "w3-bar w3-card w3-animate-top w3-white";
+    } else {
+      navbar.className = navbar.className.replace(
+        " w3-card w3-animate-top w3-white",
+        ""
+      );
+    }
+  };
+</script>
+</body>
+</html>
